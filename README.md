@@ -14,3 +14,7 @@ The following attacks have been attempted:
 - Single Pixel Attack:
   - Dead Channel: Value of pixel set to 0
   - Hot Channel: Value of pixel set to 2 times of max of image
+
+## Notebooks
+EDA.ipnyb: Shawn
+First Attack.ipnyb: Suhasan
