@@ -36,6 +36,9 @@ class ParticleClassifier():
         self.y_attacked = None
         self.predictions = None
         self.attacked_predictions = None
+        self.images_set = [self.images_train, self.images_test, self.images_attacked]
+        self.x_set = [self.x_train, self.x_test, self.x_attacked]
+        self.labels_set = [self.labels_train, self.labels_test]
         
         self.model = tf.keras.models.Sequential([
         # Note the input shape is the desired size of the image 50x50 with 1 bytes color
@@ -86,9 +89,14 @@ class ParticleClassifier():
         return self
         
     def pre_proc_filter(self, images, size=2, sigma=2):
-        '''Applies Median filter and Gaussian filter to remove noise and hot channels. Size refers to grid in
-        which median is taken - should be n+1 where n is hot channel size. Sigma refers to Gaussian filter 
-        parameter - larger for more noise reduction.'''
+        '''Applies Median filter and Gaussian filter to remove noise and hot
+        channels. Size refers to size of Median filter, sigma refers to Gaussian
+        filter parameter - larger for more blurring.
+        Parameters
+        ----------
+        size: int, optional 
+        sigma: int, optional
+        '''
         orig_shape = images.shape
         images_new = []
         for image in images.reshape((images.shape[0:-1])):        
@@ -97,48 +105,62 @@ class ParticleClassifier():
             images_new.append(image_new)
         return np.array(images_new).reshape(orig_shape)
     
-    def pre_proc_rescale(self, images):
-        '''Subtract the mean, remove all negative values and scale following the max of each image'''
+    def pre_proc_rescale(self, images, negative=False):
+        '''Subtract the mean, scales all image to between -1 and 1, and remove
+        all negative values (if False).
+        '''
         orig_shape = images.shape
         images_reshaped = images.reshape((orig_shape[0], -1))
         images_scaled = np.subtract(images_reshaped, np.median(images_reshaped, axis=1, keepdims=True))
-        images_scaled[images_scaled < 0] = 0.
+        if not negative:
+            images_scaled[images_scaled < 0] = 0.
         images_scaled = np.divide(images_scaled, np.max(images_scaled, axis=1, keepdims=True))
         images_scaled = images_scaled.reshape(orig_shape)
         return images_scaled
     
-    def pre_proc_train(self, images=None, size=2, sigma=2):
-        '''Applies both filters and rescaling to images'''
-        if images is None:
-            images = self.images_train
-        self.x_train = self.pre_proc(images, size, sigma)
-        print(self.messages['pre_proc_train'])
-        return self
-    
-    def pre_proc_test(self, images=None, size=2, sigma=2):
-        if images is None:
-            images = self.images_test
-        self.x_test = self.pre_proc(images, size, sigma)
-        print(self.messages['pre_proc_test'])
-        return self 
-    
-    def pre_proc(self, images, size=2, sigma=2):
-        x = self.pre_proc_filter(images, size=size, sigma=sigma)
-        x = self.pre_proc_rescale(x)
+    def pre_proc(self, images, size=2, sigma=2, filters=False, rescale=True):
+        '''Helper function that removes applies pre-processing to givem images.
+        '''
+        x = images.copy()
+        if filter:
+            x = self.pre_proc_filter(x, size=size, sigma=sigma)
+        if rescale:
+            x = self.pre_proc_rescale(x)
         return x
     
-    def one_hot_encode_labels(self, labels=None):
-        if labels is None:
+    def pre_proc_images(self, filters=False, rescale=True, 
+                        train=False, test=False, attacked=False, size=2, sigma=2):
+        '''Pre-processes any of the 3 image sets (train, test, attacked).
+        Filters indicate if Median and Gaussian filters should be applied. 
+        Rescale indicate if images should be rescaled.'''
+        if train:
+            self.x_train = self.pre_proc(self.images_train, size=size, 
+                                         sigma=sigma, filters=filters, 
+                                         rescale=rescale)
+        if test:
+            self.x_test = self.pre_proc(self.images_test, size=size, sigma=sigma,
+                                        filters=filters, rescale=rescale)
+        if attacked:
+            self.x_attacked = self.pre_proc(self.images_attacked, size=size,
+                                            sigma=sigma, filters=filters, 
+                                            rescale=rescale)
+        return self
+    
+    def one_hot_encode_labels(self, train=False, test=False, attacked=False):
+        '''One hot encodes any of the 3 label sets (train, test, attacked).'''
+        if train:
             self.y_train = to_categorical(self.labels_train)
+        if test:
             self.y_test = to_categorical(self.labels_test)
-            print(self.messages['one_hot_encode'])
-            return self
-        else:
-            return to_categorical(labels)
+        if attacked:
+            self.y_attacked = to_categorical(self.labels_attacked)
+        print(self.messages['one_hot_encode'])
+        return self
+
         
-    def train_model(self, x=None, y=None, val_split=0.2, epochs=10, verbose=1, callback=None, \
-                    min_delta=0.2, patience=5):
-        '''Trains CNN'''
+    def train_model(self, x=None, y=None, val_split=0.2, epochs=10, verbose=1,
+                    callback=None, min_delta=0.2, patience=5):
+        '''Trains CNN model.'''
         if x is None:
             x = self.x_train
         if y is None:
@@ -173,7 +195,8 @@ class ParticleClassifier():
         return self
     
     def gen_hot_channel_data(self, images=None, labels=None, value=None):
-        '''Adds a hot channel with double the max value at a random location for each image'''
+        '''Adds a hot channel with double the max value at a random location 
+        for each image.'''
         change_self = False
         if images is None:
             images = self.images_test
@@ -192,9 +215,9 @@ class ParticleClassifier():
         print(self.messages['gen_hot_channel_data'])
         return self
     
-    def hot_pixel_attack(self, x=None, x_attacked=None, labels=None):
-        '''Adds a hot pixel into a random position for each image and compares the new prediction 
-        against predictions without attack.'''
+    def evaluate_attack(self, x=None, x_attacked=None, labels=None):
+        '''Evaluates the 
+        against predictions without attack. Test data is used by default'''
         if x is None:
             x = self.x_test
             x_attacked = self.x_attacked
@@ -207,12 +230,54 @@ class ParticleClassifier():
               .format(np.bincount(labels_attacked), np.bincount(original_pred), np.bincount(attacked_pred)))
         print(classification_report(original_pred, attacked_pred)) 
         return self
-        
-    def add_hot_channel(self, image, pos, value):
-        '''Adds a hot channel at a given location pos=(x, y) for a given image'''
-        image[pos[0], pos[1], 0] = value
-        return image
     
+    def apply_attack(self, attack, images=None, labels=None, **kwargs):
+        '''Update images_attacked and labels_attacked after applying attack
+        on an image set (test by default). '''
+        if images is None:
+            images = self.images_test
+        if labels is None:
+            labels = self.labels_test
+        images_edited = images.copy()
+        images_edited = attack(images, **kwargs)
+        
+        self.images_attacked = images_edited
+        self.labels_attacked = labels
+        return self
+        
+    def add_hot_area(self, images, size, value=None, pos=None):
+        '''Adds a hot channel at a given location pos=(x, y) with 
+        size (i, j) for a given image.
+        :param images (n, x, y, 1)
+        :param pos (x, y), x and y are arrays of length n
+        :param size (i, j)
+        :param value to be replaced'''
+        if pos is None:
+            x = np.random.randint(0, images.shape[1]-size[0],
+                                  size=(images.shape[0],1))
+            y = np.random.randint(0, images.shape[2]-size[1], 
+                                  size=(images.shape[0], 1))
+            pos = np.concatenate([x, y], axis=1)
+        if value is None:
+            value = images.max()
+        for i in range(size[0]):
+            for j in range(size[1]):
+                images[np.arange(images.shape[0]), pos[:,0]+i, pos[:,1]+j, 0] = value
+        return images
+    
+    def hot_pixel_attack(self, images=None, labels=None, value=None):
+        if images is None:
+            images = self.images_test
+        if labels is None:
+            labels = self.labels_test
+        if value is None:
+            value = np.max(images) * 2
+            
+        loc = np.random.randint(0, images.shape[2], size=(images.shape[0], 2))
+        self.apply_attack(self.add_hot_area, images, labels, 
+                          size=[1,1], value=value, pos=loc)
+        return self
+        
     def print_image(self, index, image_set):
         '''Shows the nth image of an 4d image set of n images: (n, height, length, channel)'''
         plt.imshow(image_set[index,:,:,0])

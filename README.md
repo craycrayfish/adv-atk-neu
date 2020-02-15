@@ -1,5 +1,12 @@
 # adv-atk-neu
 
+## Getting started
+The class ParticleClassifier is written to aid in all aspects: from preparation of data to evaluating the attack on the model. Most functions return self so functions can be chained. An example of building a model and evaluating an attack is shown:
+
+```
+classifier = ParticleClassifier
+```
+
 ## Introduction
 This project explores adverserial attacks on a convolutional neural network classifier built to identify particles from particle detector outputs.
 
