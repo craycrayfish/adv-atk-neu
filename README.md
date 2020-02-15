@@ -6,26 +6,36 @@ The class ParticleClassifier is written to aid in all aspects: from preparation 
 ```
 classifier = ParticleClassifier()\ 
             # Instantiates the class
+            
             .load_data('data/toy_data.csv')\ 
             # Saves data into self.images and self.labels
+            
             .train_test_split(test_size=0.2)\ 
             # Splits images and labels into self.images_train and self.images_test
+            
             .pre_proc_images(train=True, test=True, attacked=False, filters=False, rescale=True)\
             # Applies rescaling but not filtering pre-processing to train and test image sets only
+            
             .one_hot_encode_labels(train=True, test=True)\
             # Applies one hot encoding to train and test label sets
+            
             .train_model()\
             # Train the model
+            
             .evaluate_model()\
             # Evaluate model in terms of precision and recall
+            
             .apply_attack(classifier.add_hot_area, size=(2,2), value=value)\
             # Applies attack, given as a function, to images (default test). Further arguments are passed on
             # to attack function. E.g. classifier.add_hot_area(images, size=(2,2), value=value) in this case.
             # Attack function should return images in the same format after executing attack on them.
+            
             .pre_proc_images(attacked=True, filters=False)\
             # Pre-process the attacked images
+            
             .one_hot_encode_labels(attacked=True)\
             # One hot encode the labels of attacked images
+            
             .evaluate_attack()
             # Get precision and recall values for attacked predictions against non-attacked predictions.
 ```
