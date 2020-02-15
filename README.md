@@ -1,10 +1,16 @@
 # adv-atk-neu
 
 ## Getting started
-The class ParticleClassifier is written to aid in all aspects: from preparation of data to evaluating the attack on the model. Most functions return self so functions can be chained. An example of building a model and evaluating an attack is shown:
+The class ParticleClassifier is written to aid in all aspects: from preparation of data to evaluating the attack on the model. x and y represent the pre-processed images and labels respectively. Each data set has 3 versions: train, test and attacked. If no data sets are explicitly passed into them, most functions would execute into nMost functions return self so functions can be chained. An example of building a model and evaluating an attack is shown:
 
 ```
-classifier = ParticleClassifier
+classifier = ParticleClassifier()\ # Instantiates the class
+            .load_data('data/toy_data.csv')\ # Saves data into self.images and self.labels
+            .train_test_split(test_size=0.2)\ # Splits images and labels into self.images_train and self.images_test
+            .pre_proc_images(train=True, test=True)\
+            .one_hot_encode_labels(train=True, test=True)\
+            .train_model()\
+            .evaluate_model()\
 ```
 
 ## Introduction
