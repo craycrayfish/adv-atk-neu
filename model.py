@@ -122,7 +122,7 @@ class ParticleClassifier():
         '''Helper function that removes applies pre-processing to givem images.
         '''
         x = images.copy()
-        if filter:
+        if filters:
             x = self.pre_proc_filter(x, size=size, sigma=sigma)
         if rescale:
             x = self.pre_proc_rescale(x)
