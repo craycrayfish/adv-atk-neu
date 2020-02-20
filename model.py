@@ -295,7 +295,7 @@ class ParticleClassifier():
     def show_misclassified_images(self, index):
          for i in index:
              self.print_image(i, self.x_mis_orig)
-             self.print_image(i, self.x_mis_atacked)
+             self.print_image(i, self.x_mis_attacked)
              print('{}, {}'.format(self.pred_mis_orig[i],
                                    self.pred_mis_attacked[i]))
          return self
