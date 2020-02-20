@@ -36,9 +36,11 @@ class ParticleClassifier():
         self.y_attacked = None
         self.predictions = None
         self.attacked_predictions = None
-        self.images_set = [self.images_train, self.images_test, self.images_attacked]
-        self.x_set = [self.x_train, self.x_test, self.x_attacked]
-        self.labels_set = [self.labels_train, self.labels_test]
+        self.misclassifications = None
+        self.x_mis_orig = None
+        self.x_mis_attacked = None
+        self.pred_mis_orig = None
+        self.pred_mis_attacked = None
         
         self.model = tf.keras.models.Sequential([
         # Note the input shape is the desired size of the image 50x50 with 1 bytes color
@@ -226,6 +228,11 @@ class ParticleClassifier():
         attacked_pred = np.argmax(self.model.predict(x_attacked), axis=1).astype(int)
         self.predictions = original_pred
         self.attacked_predictions = attacked_pred
+        self.misclassifications = np.invert(np.equal(original_pred, attacked_pred))
+        self.x_mis_orig = x[self.misclassifications]
+        self.x_mis_attacked = x_attacked[self.misclassifications]
+        self.pred_mis_orig = original_pred[self.misclassifications]
+        self.pred_mis_attacked = attacked_pred[self.misclassifications]
         print('Labels: {} \n Original Predictions: {} \n Attacked Predictions: {}'\
               .format(np.bincount(labels_attacked), np.bincount(original_pred), np.bincount(attacked_pred)))
         print(classification_report(original_pred, attacked_pred)) 
@@ -278,7 +285,17 @@ class ParticleClassifier():
                           size=[1,1], value=value, pos=loc)
         return self
         
+    
     def print_image(self, index, image_set):
         '''Shows the nth image of an 4d image set of n images: (n, height, length, channel)'''
         plt.imshow(image_set[index,:,:,0])
         plt.show()
+        return self
+        
+    def show_misclassified_images(self, index):
+         for i in index:
+             self.print_image(i, self.x_mis_orig)
+             self.print_image(i, self.x_mis_atacked)
+             print('{}, {}'.format(self.pred_mis_orig[i],
+                                   self.pred_mis_attacked[i]))
+         return self
