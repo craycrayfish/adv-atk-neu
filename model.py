@@ -259,6 +259,7 @@ class ParticleClassifier():
         :param pos (x, y), x and y are arrays of length n
         :param size (i, j)
         :param value to be replaced'''
+        images_att = images.copy()
         if pos is None:
             x = np.random.randint(0, images.shape[1]-size[0],
                                   size=(images.shape[0],1))
@@ -269,8 +270,9 @@ class ParticleClassifier():
             value = images.max()
         for i in range(size[0]):
             for j in range(size[1]):
-                images[np.arange(images.shape[0]), pos[:,0]+i, pos[:,1]+j, 0] = value
-        return images
+                images_att[np.arange(images_att.shape[0]), pos[:,0]+i, 
+                           pos[:,1]+j, 0] = value
+        return images_att
     
     def hot_pixel_attack(self, images=None, labels=None, value=None):
         if images is None:
@@ -286,9 +288,11 @@ class ParticleClassifier():
         return self
         
     
-    def print_image(self, index, image_set):
+    def print_image(self, index, image_set, save=False):
         '''Shows the nth image of an 4d image set of n images: (n, height, length, channel)'''
         plt.imshow(image_set[index,:,:,0])
+        if save:
+            plt.imsave(save, image_set[index,:,:,0])
         plt.show()
         return self
         
