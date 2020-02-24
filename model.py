@@ -13,6 +13,7 @@ from keras.utils import to_categorical
 from tensorflow.keras.optimizers import RMSprop
 from tensorflow.keras.callbacks import EarlyStopping
 from scipy import ndimage
+from sklearn.metrics import confusion_matrix
 
 class ParticleClassifier():
     def __init__(self):
@@ -217,7 +218,8 @@ class ParticleClassifier():
         print(self.messages['gen_hot_channel_data'])
         return self
     
-    def evaluate_attack(self, x=None, x_attacked=None, labels=None):
+    def evaluate_attack(self, x=None, x_attacked=None, labels=None, 
+                        confusion_matrix=True, file_name=False):
         '''Evaluates the 
         against predictions without attack. Test data is used by default'''
         if x is None:
@@ -236,6 +238,7 @@ class ParticleClassifier():
         print('Labels: {} \n Original Predictions: {} \n Attacked Predictions: {}'\
               .format(np.bincount(labels_attacked), np.bincount(original_pred), np.bincount(attacked_pred)))
         print(classification_report(original_pred, attacked_pred)) 
+        self.generate_confusion_matrix(file_name)
         return self
     
     def apply_attack(self, attack, images=None, labels=None, **kwargs):
@@ -303,3 +306,34 @@ class ParticleClassifier():
              print('{}, {}'.format(self.pred_mis_orig[i],
                                    self.pred_mis_attacked[i]))
          return self
+     
+    def generate_confusion_matrix(self, savefig):
+        cm = confusion_matrix(self.predictions, self.attacked_predictions)
+        cm = cm/len(self.predictions)
+        plt.rcParams.update({'axes.labelsize': 12,
+                             'axes.labelcolor': 'gray',
+                             'xtick.color': 'gray',
+                             'ytick.color': 'gray',
+                             'xtick.labelsize': 12,
+                             'ytick.labelsize': 12})
+        fig, ax = plt.subplots()
+        im = ax.imshow(cm, cmap='Wistia')
+        ax.set_xlabel('Before Attack')
+        ax.set_ylabel('After Attack')
+        ax.set_xticks(np.arange(3))
+        ax.set_yticks(np.arange(3))
+        ax.set_xticklabels(['0', '1', '2'])
+        ax.set_yticklabels(['0', '1', '2'])
+        ax.set_xticks(np.arange(3)-0.5, minor=True)
+        ax.set_yticks(np.arange(3)-0.5, minor=True)
+        
+        for i in range(len(cm)):
+            for j in range(len(cm[0])):
+                text = ax.text(j, i, '%.3f'%cm[i, j], ha='center', 
+                               va='center', color='black', size=15)
+        ax.grid(which="minor", color="black", linestyle='-', linewidth=4)
+        fig.tight_layout()
+        if savefig:
+            plt.savefig(savefig)
+        else:
+            plt.show()
