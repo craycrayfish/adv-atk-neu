@@ -162,14 +162,14 @@ class ParticleClassifier():
 
         
     def train_model(self, x=None, y=None, val_split=0.2, epochs=10, verbose=1,
-                    callback=None, min_delta=0.2, patience=5):
+                    callback=None, min_delta=0.02, patience=5):
         '''Trains CNN model.'''
         if x is None:
             x = self.x_train
         if y is None:
             y = self.y_train
         if callback is None:
-            self.callback = EarlyStopping(monitor='val_acc',
+            self.callback = EarlyStopping(monitor='val_loss',
                                       min_delta=min_delta,
                                       patience=patience)
             
@@ -298,10 +298,13 @@ class ParticleClassifier():
     
     def print_image(self, index, image_set, save=False):
         '''Shows the nth image of an 4d image set of n images: (n, height, length, channel)'''
-        plt.imshow(image_set[index,:,:,0])
-        if save:
-            plt.imsave(save, image_set[index,:,:,0])
-        plt.show()
+        if type(image_set) is not list:
+            image_set = [image_set]
+        for images in image_set:
+            plt.imshow(images[index,:,:,0])
+            if save:
+                plt.imsave(save, images[index,:,:,0])
+            plt.show()
         return self
         
     def show_misclassified_images(self, index):
@@ -317,11 +320,7 @@ class ParticleClassifier():
         cm = confusion_matrix(self.predictions[index],
                               self.attacked_predictions[index]).astype(np.float)
         for i in range(len(cm)):
-            col = cm[:, i]
-            if col.sum() == 0:
-                cm[:,i] = 0
-            else:
-                cm[:,i] = col / col.sum()
+            cm[i,:] = cm[i,:]/cm[i,:].sum()
         plt.rcParams.update({'axes.labelsize': 12,
                              'axes.labelcolor': 'gray',
                              'xtick.color': 'gray',
@@ -329,9 +328,10 @@ class ParticleClassifier():
                              'xtick.labelsize': 12,
                              'ytick.labelsize': 12})
         fig, ax = plt.subplots()
-        im = ax.imshow(cm, cmap='spring')
-        ax.set_xlabel('Before Attack')
-        ax.set_ylabel('After Attack')
+        im = ax.imshow(cm, cmap='summer')
+        ax.tick_params(top=True, bottom=False, labeltop=True, labelbottom=False)
+        ax.set_xlabel('After Attack')
+        ax.set_ylabel('Before Attack')
         ax.set_xticks(np.arange(3))
         ax.set_yticks(np.arange(3))
         ax.set_xticklabels(labels)
