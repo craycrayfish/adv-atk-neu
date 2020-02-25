@@ -218,13 +218,14 @@ class ParticleClassifier():
         print(self.messages['gen_hot_channel_data'])
         return self
     
-    def evaluate_attack(self, x=None, x_attacked=None, labels=None, 
-                        confusion_matrix=True, file_name=False):
+    def evaluate_attack(self, x=None, x_attacked=None, labels=None, labels_attacked=None, 
+                        table=True, confusion_matrix=True, file_name=False):
         '''Evaluates the 
         against predictions without attack. Test data is used by default'''
         if x is None:
             x = self.x_test
             x_attacked = self.x_attacked
+            labels = self.labels_test
             labels_attacked = self.labels_attacked
         original_pred = np.argmax(self.model.predict(x), axis=1).astype(int)
         attacked_pred = np.argmax(self.model.predict(x_attacked), axis=1).astype(int)
@@ -235,10 +236,14 @@ class ParticleClassifier():
         self.x_mis_attacked = x_attacked[self.misclassifications]
         self.pred_mis_orig = original_pred[self.misclassifications]
         self.pred_mis_attacked = attacked_pred[self.misclassifications]
-        print('Labels: {} \n Original Predictions: {} \n Attacked Predictions: {}'\
-              .format(np.bincount(labels_attacked), np.bincount(original_pred), np.bincount(attacked_pred)))
-        print(classification_report(original_pred, attacked_pred)) 
-        self.generate_confusion_matrix(file_name)
+        if table:
+            print('Labels: {} \n Original Predictions: {} \n Attacked Predictions: {}'\
+                  .format(np.bincount(labels_attacked), np.bincount(original_pred),
+                          np.bincount(attacked_pred)))
+            print(classification_report(original_pred, attacked_pred)) 
+        if confusion_matrix:
+            correct_classifications = np.equal(labels, original_pred)
+            self.generate_confusion_matrix(correct_classifications, file_name)
         return self
     
     def apply_attack(self, attack, images=None, labels=None, **kwargs):
@@ -307,9 +312,16 @@ class ParticleClassifier():
                                    self.pred_mis_attacked[i]))
          return self
      
-    def generate_confusion_matrix(self, savefig):
-        cm = confusion_matrix(self.predictions, self.attacked_predictions)
-        cm = cm/len(self.predictions)
+    def generate_confusion_matrix(self, index, savefig):
+        labels = ['background', 'electron', 'muon']
+        cm = confusion_matrix(self.predictions[index],
+                              self.attacked_predictions[index]).astype(np.float)
+        for i in range(len(cm)):
+            col = cm[:, i]
+            if col.sum() == 0:
+                cm[:,i] = 0
+            else:
+                cm[:,i] = col / col.sum()
         plt.rcParams.update({'axes.labelsize': 12,
                              'axes.labelcolor': 'gray',
                              'xtick.color': 'gray',
@@ -317,13 +329,13 @@ class ParticleClassifier():
                              'xtick.labelsize': 12,
                              'ytick.labelsize': 12})
         fig, ax = plt.subplots()
-        im = ax.imshow(cm, cmap='Wistia')
+        im = ax.imshow(cm, cmap='spring')
         ax.set_xlabel('Before Attack')
         ax.set_ylabel('After Attack')
         ax.set_xticks(np.arange(3))
         ax.set_yticks(np.arange(3))
-        ax.set_xticklabels(['0', '1', '2'])
-        ax.set_yticklabels(['0', '1', '2'])
+        ax.set_xticklabels(labels)
+        ax.set_yticklabels(labels)
         ax.set_xticks(np.arange(3)-0.5, minor=True)
         ax.set_yticks(np.arange(3)-0.5, minor=True)
         
