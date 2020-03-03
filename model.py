@@ -10,6 +10,7 @@ from sklearn import preprocessing
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report
 from keras.utils import to_categorical
+from keras.models import load_model
 from tensorflow.keras.optimizers import RMSprop
 from tensorflow.keras.callbacks import EarlyStopping
 from scipy import ndimage
@@ -186,6 +187,12 @@ class ParticleClassifier():
         print(self.messages['train_model'])
         return self
     
+    def save_model(self, name):
+        self.model.save(name)
+        
+    def load_model(self, name):
+        self.model = load_model(name)
+    
     def evaluate_model(self, x_test=None, y_test=None):
         '''Evaluate model against test set'''
         if x_test is None:
@@ -254,11 +261,20 @@ class ParticleClassifier():
         if labels is None:
             labels = self.labels_test
         images_edited = images.copy()
-        images_edited = attack(images, **kwargs)
-        
+        images_edited = attack(images_edited, **kwargs)
+        images_edited = self.add_gausian_noise(images_edited, 50,  3)
         self.images_attacked = images_edited
         self.labels_attacked = labels
         return self
+    
+    def add_gaussian_noise(self, images, mu, sigma):
+        '''Adds Gaussian noise for a given image, with mean = mu and standard
+        deviation = sigma.
+        :param images (n, x, y, 1)
+        :param mu float
+        :param sigma float'''
+        gauss = np.random.normal(mu, sigma, size=images.shape)
+        return images.copy() + gauss
         
     def add_hot_area(self, images, size, value=None, pos=None):
         '''Adds a hot channel at a given location pos=(x, y) with 
