@@ -3,6 +3,7 @@
 import os
 import numpy as np
 import tensorflow as tf
+import keras
 import keras.metrics
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -10,11 +11,13 @@ from sklearn import preprocessing
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report
 from keras.utils import to_categorical
-from keras.models import load_model
+#from keras.models import load_model
 from tensorflow.keras.optimizers import RMSprop
 from tensorflow.keras.callbacks import EarlyStopping
 from scipy import ndimage
 from sklearn.metrics import confusion_matrix
+import h5py
+
 
 class ParticleClassifier():
     def __init__(self):
@@ -189,9 +192,11 @@ class ParticleClassifier():
     
     def save_model(self, name):
         self.model.save(name)
+        return self
         
     def load_model(self, name):
-        self.model = load_model(name)
+        self.model = tf.keras.models.load_model(name)
+        return self
     
     def evaluate_model(self, x_test=None, y_test=None):
         '''Evaluate model against test set'''
