@@ -42,10 +42,11 @@ class ParticleClassifier():
         self.predictions = None
         self.attacked_predictions = None
         self.misclassifications = None
-        self.x_mis_orig = None
-        self.x_mis_attacked = None
+        self.images_mis_orig = None
+        self.images_mis_attacked = None
         self.pred_mis_orig = None
         self.pred_mis_attacked = None
+        self.report_dict = None
         
         self.model = tf.keras.models.Sequential([
         # Note the input shape is the desired size of the image 50x50 with 1 bytes color
@@ -237,6 +238,8 @@ class ParticleClassifier():
         if x is None:
             x = self.x_test
             x_attacked = self.x_attacked
+            images = self.images_test
+            images_attacked = self.images_attacked
             labels = self.labels_test
             labels_attacked = self.labels_attacked
         original_pred = np.argmax(self.model.predict(x), axis=1).astype(int)
@@ -244,8 +247,8 @@ class ParticleClassifier():
         self.predictions = original_pred
         self.attacked_predictions = attacked_pred
         self.misclassifications = np.invert(np.equal(original_pred, attacked_pred))
-        self.x_mis_orig = x[self.misclassifications]
-        self.x_mis_attacked = x_attacked[self.misclassifications]
+        self.images_mis_orig = images[self.misclassifications]
+        self.images_mis_attacked = images_attacked[self.misclassifications]
         self.pred_mis_orig = original_pred[self.misclassifications]
         self.pred_mis_attacked = attacked_pred[self.misclassifications]
         if table:
@@ -256,9 +259,11 @@ class ParticleClassifier():
         if confusion_matrix:
             correct_classifications = np.equal(labels, original_pred)
             self.generate_confusion_matrix(correct_classifications, file_name)
+        self.report_dict = classification_report(original_pred, attacked_pred, 
+                                                 output_dict=1)
         return self
     
-    def apply_attack(self, attack, images=None, labels=None, **kwargs):
+    def apply_attack(self, attack, images=None, labels=None, gaussian_noise=True, **kwargs):
         '''Update images_attacked and labels_attacked after applying attack
         on an image set (test by default). '''
         if images is None:
@@ -267,7 +272,8 @@ class ParticleClassifier():
             labels = self.labels_test
         images_edited = images.copy()
         images_edited = attack(images_edited, **kwargs)
-        images_edited = self.add_gausian_noise(images_edited, 50,  3)
+        if gaussian_noise:
+            images_edited = self.add_gaussian_noise(images_edited, 50,  3)
         self.images_attacked = images_edited
         self.labels_attacked = labels
         return self
@@ -312,26 +318,35 @@ class ParticleClassifier():
             value = np.max(images) * 2
             
         loc = np.random.randint(0, images.shape[2], size=(images.shape[0], 2))
-        self.apply_attack(self.add_hot_area, images, labels, 
+        self.apply_attack(self.add_hot_area, images, labels, gaussian_noise=False,
                           size=[1,1], value=value, pos=loc)
         return self
         
     
-    def print_image(self, index, image_set, save=False):
+    def print_image(self, index, image_set, file_name=False):
         '''Shows the nth image of an 4d image set of n images: (n, height, length, channel)'''
         if type(image_set) is not list:
             image_set = [image_set]
         for images in image_set:
             plt.imshow(images[index,:,:,0])
-            if save:
-                plt.imsave(save, images[index,:,:,0])
+            plt.colorbar()
+            if file_name:
+                plt.savefig(file_name, bbox_inches='tight')
             plt.show()
         return self
         
-    def show_misclassified_images(self, index):
+    def show_misclassified_images(self, index, file_name=False):
          for i in index:
-             self.print_image(i, self.x_mis_orig)
-             self.print_image(i, self.x_mis_attacked)
+             if file_name:
+                org = '_orig.'.join(file_name.split('.'))
+                atk = '_attacked.'.join(file_name.split('.'))
+             else:
+                org = False
+                atk = False
+             self.print_image(i, self.images_mis_orig, 
+                              file_name=org)
+             self.print_image(i, self.images_mis_attacked, 
+                             file_name=atk)
              print('{}, {}'.format(self.pred_mis_orig[i],
                                    self.pred_mis_attacked[i]))
          return self
