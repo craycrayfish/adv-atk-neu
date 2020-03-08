@@ -358,9 +358,6 @@ class ParticleClassifier():
         for i in range(len(cm)):
             cm[i,:] = cm[i,:]/cm[i,:].sum()
         plt.rcParams.update({'axes.labelsize': 12,
-                             'axes.labelcolor': 'gray',
-                             'xtick.color': 'gray',
-                             'ytick.color': 'gray',
                              'xtick.labelsize': 12,
                              'ytick.labelsize': 12})
         fig, ax = plt.subplots()
