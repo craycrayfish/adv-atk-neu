@@ -1,7 +1,7 @@
 # adv-atk-neu
 
 ## Getting started
-The class ParticleClassifier is written to aid in all aspects: from preparation of data to evaluating the attack on the model. x and y represent the pre-processed images and labels respectively. Each data set has 3 versions: train, test and attacked. If no data sets are explicitly passed into them, most functions would execute into nMost functions return self so functions can be chained. An example of building a model and evaluating an attack is shown:
+The class ParticleClassifier is written to aid in all aspects: from preparation of data to evaluating the attack on the model. x and y represent the pre-processed images and labels respectively. Each data set has 3 versions: train, test and attacked. If no data sets are explicitly passed into them, most functions would execute into the data set in the class that makes most sense. Most functions return self so functions can be chained. An example of building a model and evaluating an attack is shown:
 
 ```
 classifier = ParticleClassifier()\ 
@@ -14,19 +14,23 @@ classifier = ParticleClassifier()\
             # Splits images and labels into self.images_train and self.images_test
             
             .pre_proc_images(train=True, test=True, attacked=False, filters=False, rescale=True)\
-            # Applies rescaling but not filtering pre-processing to train and test image sets only
+            # Possible data sets to execute on are train, test and attacked
+            # Possible pre-processing steps are min-max rescaling and filtering (Median + Gaussian)
             
             .one_hot_encode_labels(train=True, test=True)\
-            # Applies one hot encoding to train and test label sets
+            # Applies one hot encoding. Same data sets as above
             
             .train_model()\
-            # Train the model
+            # Train the model. Alternatively, load a model (see below).
+            
+            .load_model('model.h5')\
+            # Loads a pre-trained model. Remove train_model().
             
             .evaluate_model()\
             # Evaluate model in terms of precision and recall
             
             .apply_attack(classifier.add_hot_area, size=(2,2), value=value)\
-            # Applies attack, given as a function, to images (default test). Further arguments are passed on
+            # Applies attack, given as a function, to images_test -> images_attacked. Further arguments are passed on
             # to attack function. E.g. classifier.add_hot_area(images, size=(2,2), value=value) in this case.
             # Attack function should return images in the same format after executing attack on them.
             
@@ -51,13 +55,18 @@ The CNN built was able to achieve an accuray of around 0.98. Precision and recal
 
 ## Attacks
 The following attacks have been attempted:
-- Single Pixel Attack:
+- Electronic Noise:
   - Dead Channel: Value of pixel set to 0
   - Hot Channel: Value of pixel set to 2 times of max of image
-- Background Neutrons:
+  - Salt and Pepper: Pairs of dead and hot pixels
+  - Gaussian Noise: Add Gaussian distributed values
+- Background Radiation:
   - Single Low-Energy Neutron: Value of a group of 4 pixels set to between mean and max
+- Physical Effects:
+  - Space Charge: Gaussian kernel applied to image, followed by noise replenishment
 
 ## Notebooks
-EDA.ipnyb: Shawn
+EDA.ipnyb: Exploring data and CNN built (Shawn)
+Analysis.ipnyb: Attacks including single pixel, neutron radiation (Shawn)
 
 First Attack.ipnyb: Suhasan
